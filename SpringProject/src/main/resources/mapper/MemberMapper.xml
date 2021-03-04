@@ -1,0 +1,124 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper
+  PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+  "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="org.sist.project.mapper.MemberMapper">
+	<select id="selectAdminList" resultType="MemberVO">
+		SELECT tbl_member.member_seq, username, password, enabled, name, birth, gender, image, email
+		FROM tbl_member
+		JOIN tbl_auth ON tbl_member.member_seq = tbl_auth.member_seq
+		WHERE tbl_auth.authority = 'ROLE_ADMIN'
+	</select>
+	<insert id="insertMember">
+		INSERT INTO tbl_member (member_seq, username, email, password, name, birth, gender, image) VALUES
+		(seq_member.nextval, #{username}, #{email}, #{password}, #{name}, #{birth}, #{gender}, #{image, jdbcType=VARCHAR})
+		<!-- null처리를 위해 타입 명시 -->
+	</insert>
+	<update id="modifyMember">
+		UPDATE tbl_member set password = #{password}, name = #{name}, birth = #{birth}, gender = #{gender}, image = #{image, jdbcType=VARCHAR}
+		WHERE username = #{username}
+	</update>
+	
+	<update id="removeMember">
+		UPDATE tbl_member SET enabled=0 WHERE member_seq = #{member_seq}
+	</update>
+	<select id="selectUserById" resultType="MemberDetails">
+        <![CDATA[
+            SELECT tbl_member.*, tbl_auth.authority
+            FROM tbl_member
+            JOIN tbl_auth ON tbl_member.member_seq = tbl_auth.member_seq
+            WHERE username = #{username}
+        ]]>
+    </select>
+    <select id="selectUsername" resultType="String">
+    	SELECT username 
+    	FROM tbl_member 
+    	WHERE username = #{username}
+    </select>
+    <select id="selectUserEmail" resultType="String">
+    	SELECT email 
+    	FROM tbl_member 
+    	WHERE username = #{username}
+    </select>
+    <update id="updateUserPassword">
+    	UPDATE tbl_member SET
+    	password = #{password}
+    	WHERE username = #{username}
+    </update>
+    <select id="selectNoticeCount" resultType="Integer">
+    	SELECT COUNT(*) FROM tbl_notice
+    	WHERE recieve_member_seq = #{value} AND notice_readdate IS NULL
+    </select>
+    
+    <select id="selectNewNotice">
+		SELECT tbl_member.name, tbl_notice.notice_member_seq, tbl_survey.title, tbl_survey.survey_seq, tbl_notice.notice_regdate, tbl_notice.notice_message, tbl_notice.notice_type
+		FROM tbl_notice
+		JOIN tbl_member ON tbl_member.member_seq = tbl_notice.notice_member_seq
+		JOIN tbl_survey ON tbl_survey.survey_seq = tbl_notice.survey_seq
+		WHERE recieve_member_seq = #{value} AND notice_readdate IS NULL
+    </select>
+    <!-- <select id="selectOldNotice">
+    </select> -->
+    <select id="selectUserNotice" resultType="NoticeVO">
+    	select x.*
+   		 , CASE notice_type  
+            WHEN 1 THEN participated_username||'님이 ['||title||'] 설문에 댓글을 남기셨습니다.'
+            WHEN 2 THEN participated_username||'님이 ['||title||'] 설문에 참여하였습니다.'
+            END as notice_message
+		from (           
+				select notice_seq, recieve_member_seq, notice_member_seq, c.username as participated_username
+      			, a.survey_seq, reply_seq, survey_result_seq, notice_type, notice_regdate, notice_readdate  
+        		, d.title, progressing
+        		, CASE notice_type  
+            		WHEN 1 THEN NVL(c.image, 'default_profile.png')
+            		WHEN 2 THEN NVL(d.image, 'survey_default.jpg')
+            		END as usimage
+		from tbl_notice a
+		join tbl_member c on a.notice_member_seq = c.member_seq
+		join tbl_survey d on a.survey_seq = d.survey_seq
+		where recieve_member_seq = #{member_seq}) x
+    </select>
+    
+    <update id="updateNoticeRead">
+		UPDATE tbl_notice SET notice_readdate = sysdate
+		WHERE recieve_member_seq = #{value} AND notice_readdate IS NULL
+    </update>
+    
+    <update id="readUserNotice">
+    	UPDATE tbl_notice SET notice_readdate = sysdate
+		WHERE recieve_member_seq = #{value} AND notice_readdate IS NULL
+    </update>
+	<select id="selectSearchMember" resultType="MemberVO">
+		<![CDATA[
+		WITH origin_no AS(
+			SELECT ROWNUM no, origin.*
+			FROM(
+				SELECT member_seq, username, name, email, birth, enabled from tbl_member 
+				WHERE ${type}  like
+				CONCAT('%', CONCAT( '${search}', '%'))
+			) origin
+			WHERE ROWNUM <= #{page} * #{perPageNum}
+		)
+		SELECT origin_no.*
+		FROM origin_no
+		WHERE origin_no.no > (#{page}-1) * #{perPageNum}
+		]]>		
+	</select>
+	<select id="selectMemberCountPaging" resultType="int">
+		<![CDATA[
+		SELECT COUNT(member_seq) 
+		FROM tbl_member
+		WHERE ${type} LIKE CONCAT('%', CONCAT( '${search}', '%'))
+		]]>
+	</select>
+	<update id="updateMemberUnabled">
+		update tbl_member set enabled=0
+		where member_seq in 
+		<foreach item="memlist" index="index" collection="array"
+	     	open="(" separator="," close=")">
+	        #{memlist}
+	  	</foreach>
+	</update>
+
+</mapper>

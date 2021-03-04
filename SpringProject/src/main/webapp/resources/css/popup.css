@@ -1,0 +1,2 @@
+div.noticePopup { z-index:2000; display:none; position:fixed; left:50%; top:50%; background-color:rgba(0,0,0,0.75); border-radius: 3px; }
+div.noticePopup>div.noticeMessage { color:white; }

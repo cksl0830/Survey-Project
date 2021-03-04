@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans:beans xmlns:beans="http://www.springframework.org/schema/beans"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xmlns="http://www.springframework.org/schema/security"
+	xmlns:mvc="http://www.springframework.org/schema/mvc"
+	xsi:schemaLocation="http://www.springframework.org/schema/security http://www.springframework.org/schema/security/spring-security-3.2.xsd
+		http://www.springframework.org/schema/mvc http://www.springframework.org/schema/mvc/spring-mvc-4.0.xsd
+		http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans.xsd">
+	<http>
+		<form-login login-page="/survey/login"
+			authentication-failure-url="/survey/login?login_error=true"
+			default-target-url="/survey/main"
+			login-processing-url="/survey/loginCheck"
+			password-parameter="password" username-parameter="username" />
+		<logout logout-url="/survey/logout" logout-success-url="/survey/main" />
+		<intercept-url pattern="/survey/admin" access="ROLE_ADMIN" />
+		<intercept-url pattern="/survey/login" access="ROLE_ANONYMOUS" />
+		<intercept-url pattern="/survey/foundPassword" access="ROLE_ANONYMOUS" />
+		<intercept-url pattern="/survey/editProfile" access="ROLE_USER, ROLE_ADMIN" />
+		<intercept-url pattern="/survey/addSurvey" access="ROLE_USER, ROLE_ADMIN" />
+		
+	</http>
+	<beans:bean id="memberDetailService" class="org.sist.project.member.MemberDetailService" />
+	<beans:bean id="memberAuthenticationProvider" class="org.sist.project.member.MemberAuthenticationProvider" />
+
+	<beans:bean id="passwordEncoder" class="org.springframework.security.crypto.password.StandardPasswordEncoder" />
+
+	<authentication-manager alias="authenticationManager">
+		<authentication-provider ref="memberAuthenticationProvider">
+		</authentication-provider>
+		<authentication-provider user-service-ref="memberDetailService">
+			<password-encoder ref="passwordEncoder"/>
+		</authentication-provider>
+	</authentication-manager>
+    
+</beans:beans>

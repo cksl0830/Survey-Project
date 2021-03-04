@@ -1,0 +1,202 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="org.sist.project.mapper.SurveyMapper">
+	<sql id="search">
+		<choose>
+			<when test="progressing == null or progressing.isEmpty()">
+				AND progressing = 1
+			</when>
+			<otherwise>
+				AND progressing = #{progressing}
+			</otherwise>
+		</choose>
+		<if test="search != null and !search.isEmpty()">
+			<bind name="pattern" value="'%' +  search  + '%'" /><!-- SearchCriteria.keyword로 
+				넘어옴 -->
+			<choose>
+				<when test="type eq 'writer'">
+					AND name LIKE #{ pattern }
+				</when>
+				<when test="type eq 'title'">
+					AND title LIKE #{ pattern } OR content LIKE #{ pattern }
+				</when>
+			</choose>
+		</if>
+	</sql>
+	<select id="selectSurveyList" resultType="SurveyVO">
+		<![CDATA[
+		WITH origin_no AS(
+		    SELECT ROWNUM no, origin.*
+		    FROM (
+		        SELECT survey_seq, tbl_member.member_seq, name, 
+		        	title, content, reg_date, end_date, progressing, tbl_survey.image, (
+		                SELECT COUNT(survey_result_seq) 
+		                FROM tbl_survey_result
+		                JOIN tbl_survey_item ON tbl_survey_result.survey_item_seq = tbl_survey_item.survey_item_seq
+		                WHERE tbl_survey_item.survey_seq = tbl_survey.survey_seq
+		            ) participantCnt
+		        FROM tbl_survey
+		        JOIN tbl_member ON tbl_survey.member_seq = tbl_member.member_seq
+		        WHERE survey_seq > 0
+				]]>
+		<include refid="search" />
+				ORDER BY reg_date DESC
+				<![CDATA[
+		    ) origin
+		    WHERE ROWNUM <= #{page} * #{perPageNum}
+		)
+		SELECT origin_no.*
+		FROM origin_no
+		WHERE origin_no.no > (#{page}-1) * #{perPageNum}
+		]]>
+	</select>
+	<select id="selectCountPaging" resultType="int">
+		<![CDATA[
+		SELECT COUNT(survey_seq) 
+		FROM tbl_survey
+		JOIN tbl_member ON tbl_member.member_seq = tbl_survey.member_seq
+		WHERE survey_seq > 0
+		]]>
+		<include refid="search" />
+	</select>
+
+	<select id="selectSurvey" resultType="SurveyVO">
+		SELECT survey_seq, title,
+		tbl_member.member_seq, name, reg_date, content, progressing, end_date,
+		tbl_survey.image ,
+		(
+		SELECT COUNT(survey_result_seq)
+		FROM tbl_survey_result
+		JOIN tbl_survey_item ON tbl_survey_result.survey_item_seq =
+		tbl_survey_item.survey_item_seq
+		WHERE tbl_survey_item.survey_seq = tbl_survey.survey_seq
+		) participantCnt
+		FROM tbl_survey
+		JOIN tbl_member ON tbl_survey.member_seq =
+		tbl_member.member_seq
+		WHERE survey_seq = #{ survey_seq }
+	</select>
+
+	<select id="selectSurveyItems" resultType="SurveyItemVO">
+		SELECT
+		survey_item_seq, survey_seq, content
+		FROM tbl_survey_item
+		WHERE survey_seq = #{ survey_seq }
+	</select>
+
+	<select id="selecyMySurveyResult" resultType="SurveyItemVO">
+		SELECT
+		tbl_survey_item.survey_item_seq, survey_seq, content
+		FROM
+		tbl_survey_result
+		JOIN tbl_survey_item ON
+		tbl_survey_item.survey_item_seq = tbl_survey_result.survey_item_seq
+		WHERE survey_seq = #{ survey_seq } AND tbl_survey_result.member_seq =
+		#{member_seq}
+	</select>
+
+	<select id="selectResultDataset" resultType="ResultDataSet">
+		SELECT TRUNC
+		(EXTRACT(YEAR FROM TO_DATE(sysdate))-EXTRACT(YEAR FROM
+		TO_DATE(tm.birth)), -1) age,
+		tm.gender, tm.name, tsi.survey_item_seq
+		FROM tbl_survey_item tsi
+		JOIN
+		tbl_survey_result tsr ON tsr.survey_item_seq = tsi.survey_item_seq
+		JOIN tbl_member tm ON tsr.member_seq = tm.member_seq
+		WHERE
+		tsi.survey_seq = #{ survey_seq }
+	</select>
+
+	<select id="selectReplyList" resultType="ReplyVO">
+		select reply_seq,
+		a.member_seq, username, reply_msg, writetime,survey_seq, image from
+		tbl_reply a
+		join tbl_member b on a.member_seq = b.member_seq
+		where
+		survey_seq=#{ survey_seq }
+		order by reply_seq desc
+	</select>
+
+	<select id="selectReplyMember" resultType="int">
+		select member_seq from
+		tbl_member where username = #{username}
+	</select>
+
+	<insert id="insertReply">
+		insert into tbl_reply values
+		(seq_reply.nextval, #{survey_seq}, #{member_seq}, #{reply_msg},
+		sysdate)
+	</insert>
+	
+	<update id="updateReply">
+		update tbl_reply 
+		set reply_msg=#{reply_msg} 
+		where reply_seq=#{reply_seq} 
+	</update>
+	
+	<delete id="delReply">
+		delete from tbl_reply where reply_seq=#{reply_seq}
+	</delete>
+	
+
+	<insert id="addSurveyResult">
+		INSERT INTO tbl_survey_result VALUES
+		( seq_survey_result.nextval, #{survey_seq}, #{survey_item_seq}, #{member_seq}, sysdate )
+	</insert>
+
+	<insert id="insertSurvey">
+		insert into tbl_survey (survey_seq, member_seq, title, content, end_date,
+		PROGRESSING, image)
+		values (seq_survey.nextval, #{member_seq}, #{title}, #{content},
+		#{end_date}, 1, #{image, jdbcType=VARCHAR})
+	</insert>
+
+
+	<insert id="insertSurveyItem">
+		insert into tbl_survey_item
+		values
+		(seq_survey_item.nextval, seq_survey.currval, #{content})
+	</insert>
+	<select id="selectSearchSurvey" resultType="SurveyVO">
+		<![CDATA[
+		WITH origin_no AS(
+			SELECT ROWNUM no, origin.*
+			FROM(
+				SELECT member_seq, survey_seq ,title, reg_date, end_date, progressing
+				FROM tbl_survey JOIN tbl_member
+				USING (member_seq) where ${type} like CONCAT('%',CONCAT('${search}','%'))
+			)origin
+			WHERE ROWNUM <= #{page} * #{perPageNum}
+		)
+		SELECT origin_no.*
+		FROM origin_no
+		WHERE origin_no.no > (#{page}-1) * #{perPageNum}
+		]]>
+	</select>
+	
+	<update id="closeSurvey">
+		UPDATE tbl_survey set PROGRESSING = 0
+		WHERE survey_seq = #{survey_seq}
+	</update>
+	
+	<delete id="removeSurvey">
+		DELETE FROM tbl_survey
+		WHERE survey_seq = #{survey_seq}
+	</delete>
+	<delete id="deleteSurveyUnabled">
+	delete from tbl_survey where survey_seq in
+	<foreach item="surseqlist" collection="array" index="index" open="(" separator="," close=")">
+	${surseqlist}
+	</foreach>
+	</delete>
+	
+	<select id="selectImageFileName" resultType="String">
+	SELECT image FROM TBL_SURVEY WHERE survey_seq in
+	<foreach item="surseqlist" collection="array" index="index" open="(" separator="," close=")">
+	${surseqlist}
+	</foreach>
+	</select>
+	
+</mapper>
