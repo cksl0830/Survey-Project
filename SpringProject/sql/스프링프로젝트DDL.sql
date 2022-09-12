@@ -1,3 +1,5 @@
+// 사용자 일련번호 추가 & 프로필 이미지 추가
+
 SELECT 'DROP TABLE "' || TABLE_NAME || '" CASCADE CONSTRAINTS;' FROM user_tables;
 
 SELECT 'DROP SEQUENCE "' || SEQUENCE_NAME || '";' FROM user_sequences;
