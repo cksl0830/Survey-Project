@@ -1,4 +1,4 @@
-create or replace TRIGGER TRI_INSERT_AUTH -- �궗�슜�옄 異붽��떆 auth�뿉 �옄�룞�쑝濡� ROLE_USER濡� 異붽��릺�룄濡� �꽕�젙
+create or replace TRIGGER TRI_INSERT_AUTH 
 AFTER
     INSERT ON tbl_member
     FOR EACH ROW -- �뻾�듃由ш굅 �븘�닔 �꽑�뼵
@@ -7,13 +7,11 @@ BEGIN
     (:new.member_seq);
 END;
 /
--- 1�씪寃쎌슦�뿏 �벑濡앺븳 �꽕臾몄“�궗�뿉 �뙎湲��씠 異붽��맆 寃쎌슦 tbl_notice�뿉 �븣由� �벑濡�
--- 2�씪寃쎌슦�뿏 �벑濡앺븳 �꽕臾몄“�궗�뿉 �늻援곌� 李몄뿬�븷 寃쎌슦 tbl_notice�뿉 �븣由� �벑濡�
 
 CREATE OR REPLACE TRIGGER TRI_INSERT_NOTICE_SURVEY_REPLY
 AFTER
     INSERT ON tbl_reply
-    FOR EACH ROW -- �뻾�듃由ш굅 �븘�닔 �꽑�뼵
+    FOR EACH ROW 
 DECLARE    
     receive_member NUMBER;
 BEGIN
@@ -32,12 +30,10 @@ END;
 
 /
 
---tbl_survey�쓽 �옉�꽦�옄瑜� �븣湲곗쐞�빐 �닾�몴�븳 踰덊샇�쓽 tbl_survey瑜� join�빐�꽌 �옉�꽦�옄瑜� 李얜뒗�떎. (res�뒗 �듃由ш굅 �씠由꾩씠 30湲��옄 �꽆�뼱媛�硫� �븞�릺�꽌 吏쒕쫫)
-
 CREATE OR REPLACE TRIGGER TRI_INSERT_NOTICE_SURVEY_RES
 AFTER
     INSERT ON tbl_survey_result
-    FOR EACH ROW -- �뻾�듃由ш굅 �븘�닔 �꽑�뼵
+    FOR EACH ROW 
 DECLARE    
     receive_member NUMBER;
     var_survey_seq NUMBER;
